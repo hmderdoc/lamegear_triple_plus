@@ -22,9 +22,11 @@ jobs:
       matrix:
         include:
           - { label: linux-x86_64,   target: x86_64-unknown-linux-musl }
-          - { label: linux-arm64,    target: aarch64-unknown-linux-musl }  # Raspberry Pi 64-bit, ARM servers
+          - { label: linux-arm64,    target: aarch64-unknown-linux-musl }      # Raspberry Pi 64-bit, ARM servers
+          - { label: linux-armv7,    target: armv7-unknown-linux-musleabihf }  # 32-bit ARM (older Pi)
+          - { label: linux-i686,     target: i686-unknown-linux-musl }         # 32-bit Linux
           - { label: windows-x86_64, target: x86_64-pc-windows-gnu }
-          - { label: windows-i686,   target: i686-pc-windows-gnu }         # 32-bit Windows
+          - { label: windows-i686,   target: i686-pc-windows-gnu }             # 32-bit Windows
           - { label: freebsd-x86_64, target: x86_64-unknown-freebsd }
     steps:
       - uses: actions/checkout@v4
