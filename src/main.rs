@@ -42,7 +42,10 @@ use systems::SYSTEMS;
 use term::Term;
 
 fn print_usage() {
-    eprintln!("LameGear+ - Sega Game Gear / Master System / SG-1000 BBS door");
+    eprintln!(
+        "LameGear+ - 8-system retro console BBS door \
+         (GG / SMS / SG-1000 / Genesis / NES / SNES / GBA / PCE)"
+    );
     eprintln!();
     eprintln!("Usage: lamegear [options] [rom]");
     eprintln!();
