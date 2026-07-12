@@ -24,7 +24,7 @@ Gear-to-Gear serial cable).
 
 Prebuilt, dependency-free binaries are attached to each
 [release](../../releases) — Linux (x86_64 / arm64, static musl), Windows
-(x86_64), macOS (arm64 / x86_64), and FreeBSD (x86_64). No runtime libs
+(x86_64 / i686), macOS (arm64 / x86_64), and FreeBSD (x86_64). No runtime libs
 required. Each archive contains the door (`lamegear`), the netplay relay
 (`gg-link-server`), the splash screen, a sample config, and the sysop tools.
 

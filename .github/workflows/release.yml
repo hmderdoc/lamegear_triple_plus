@@ -24,6 +24,7 @@ jobs:
           - { label: linux-x86_64,   target: x86_64-unknown-linux-musl }
           - { label: linux-arm64,    target: aarch64-unknown-linux-musl }  # Raspberry Pi 64-bit, ARM servers
           - { label: windows-x86_64, target: x86_64-pc-windows-gnu }
+          - { label: windows-i686,   target: i686-pc-windows-gnu }         # 32-bit Windows
           - { label: freebsd-x86_64, target: x86_64-unknown-freebsd }
     steps:
       - uses: actions/checkout@v4

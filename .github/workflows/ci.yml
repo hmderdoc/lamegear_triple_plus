@@ -17,3 +17,21 @@ jobs:
         run: cargo build --release --locked -p lamegear -p gg_link_server
       - name: test
         run: cargo test --release --locked
+
+  # The Windows I/O path (term.rs's WinSock/raw-handle module) is never compiled
+  # by the Linux build above, so it can rot unnoticed until a release tag fires.
+  # Type-check both Windows targets on every push instead. `cargo check` needs no
+  # mingw linker, so this stays cheap.
+  windows-check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [x86_64-pc-windows-gnu, i686-pc-windows-gnu]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: check
+        run: cargo check --release --locked -p lamegear -p gg_link_server --target ${{ matrix.target }}

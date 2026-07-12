@@ -1,6 +1,6 @@
 [package]
 name = "lamegear"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 authors = ["hmderdoc"]
 description = "LameGear+++ — an 8-system retro console BBS door (Game Gear / Master System / SG-1000 / Genesis / NES / SNES / GBA / PC Engine): CP437 & sixel rendering, lockstep netplay, chat, per-user saves"
