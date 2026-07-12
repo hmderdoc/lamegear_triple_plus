@@ -37,7 +37,13 @@ mkdir -p "$OUT"
 cp "$DOOR" "$OUT/"
 # The netplay relay ships prebuilt alongside the door (one relay can serve
 # a whole network of BBSes — and lameboy doors too, same wire protocol).
-[ -f "$RELAY" ] && cp "$RELAY" "$OUT/" || true
+# Hard requirement: a release without it silently regressed once (cargo
+# builds only the root package unless -p gg_link_server is passed).
+if [ ! -f "$RELAY" ]; then
+  echo "relay artifact not found: $RELAY (build with -p gg_link_server)" >&2
+  exit 1
+fi
+cp "$RELAY" "$OUT/"
 
 # Docs, sample config, and the splash screen the door loads at runtime.
 for f in README.md LICENSE NOTICE lamegear.ini.example lamegear_splash.bin; do

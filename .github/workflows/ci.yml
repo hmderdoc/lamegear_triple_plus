@@ -14,6 +14,6 @@ jobs:
       # Pure-Rust, dependency-free workspace: the door binary AND the
       # netplay relay (gg-link-server) build together.
       - name: build
-        run: cargo build --release --locked
+        run: cargo build --release --locked -p lamegear -p gg_link_server
       - name: test
         run: cargo test --release --locked

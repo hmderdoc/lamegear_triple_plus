@@ -32,7 +32,7 @@ jobs:
         with:
           tool: cross
       - name: build
-        run: cross build --release --locked --target ${{ matrix.target }}
+        run: cross build --release --locked -p lamegear -p gg_link_server --target ${{ matrix.target }}
       - name: package
         run: ./.github/package.sh "${{ matrix.label }}" "${{ matrix.target }}" "${GITHUB_REF_NAME}"
       - uses: actions/upload-artifact@v4
@@ -58,7 +58,7 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - name: build
-        run: cargo build --release --locked --target ${{ matrix.target }}
+        run: cargo build --release --locked -p lamegear -p gg_link_server --target ${{ matrix.target }}
       - name: package
         run: ./.github/package.sh "${{ matrix.label }}" "${{ matrix.target }}" "${GITHUB_REF_NAME}"
       - uses: actions/upload-artifact@v4
