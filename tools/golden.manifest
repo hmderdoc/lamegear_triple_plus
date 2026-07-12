@@ -1,0 +1,7 @@
+GOLDEN cc7e0bc0 frame=300 size=256x192 machine=MasterSystem
+GOLDEN 649f17f9 frame=300 size=160x144 machine=GameGear
+GOLDEN 332d2c3a frame=300 size=256x224 machine=Genesis
+GOLDEN d9697684 frame=300 size=256x224 machine=Nes
+GOLDEN 6e8d8520 frame=300 size=256x224 machine=Snes
+GOLDEN c31b5e81 frame=300 size=240x160 machine=Gba
+GOLDEN a69894d7 frame=300 size=256x224 machine=Pce

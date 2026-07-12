@@ -1,0 +1,39 @@
+# Build artifacts
+/target/
+/dist/
+
+# ROMs and per-user data: large and/or copyrighted — never commit.
+# (.saves, .replays, .link-shapes live under roms/, so this covers them.)
+/roms/*
+!/roms/CREDITS.txt
+
+# GBA BIOS: copyrighted Nintendo code. Sysops dump their own; it is never
+# committed and never redistributed in releases.
+/gba_bios.bin
+gba_bios.bin
+
+# Locally fetched Libretro artwork: the fetcher is source, the images are
+# not redistributed.
+/art/*
+!/art/README.md
+
+# Deployed binaries (build artifacts)
+/lamegear
+/lamegear.exe
+
+# Sysop's live door config (ships only as lamegear.ini.example)
+/lamegear.ini
+
+# Runtime diagnostics
+/sixel-debug.log
+*.log
+keylog-*.txt
+linklog-*.txt
+
+# Local scratch
+__pycache__/
+*.ppm
+/gameboy_menu_example.png
+
+# Deployed relay binary (build artifact)
+/link-server/gg-link-server

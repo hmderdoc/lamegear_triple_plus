@@ -1,0 +1,148 @@
+[package]
+name = "lamegear"
+version = "0.1.0"
+edition = "2021"
+authors = ["hmderdoc"]
+description = "LameGear+ — an 8-system retro console BBS door (Game Gear / Master System / SG-1000 / Genesis / NES / SNES / GBA / PC Engine): CP437 & sixel rendering, lockstep netplay, chat, per-user saves"
+# GPL-3.0 because the vendored jgenesis emulator cores are GPL-3.0.
+license = "GPL-3.0-only"
+repository = "https://github.com/hmderdoc/lamegear-"
+readme = "README.md"
+exclude = ["roms/", "art/", ".saves/"]
+
+[workspace]
+members = [
+    "link-server",
+    "vendor/smsgg-core",
+    "vendor/smsgg-config",
+    "vendor/genesis-core",
+    "vendor/genesis-config",
+    "vendor/nes-core",
+    "vendor/pce-core",
+    "vendor/pce-config",
+    "vendor/huc6280-emu",
+    "vendor/nes-config",
+    "vendor/snes-core",
+    "vendor/snes-config",
+    "vendor/snes-coprocessors",
+    "vendor/gba-core",
+    "vendor/gba-config",
+    "vendor/gb-core",
+    "vendor/gb-config",
+    "vendor/wdc65816-emu",
+    "vendor/spc700-emu",
+    "vendor/arm7tdmi-emu",
+    "vendor/jgenesis-common",
+    "vendor/jgenesis-proc-macros",
+    "vendor/dsp",
+    "vendor/m68000-emu",
+    "vendor/mos6502-emu",
+    "vendor/z80-emu",
+    "vendor/ym-opll",
+]
+resolver = "2"
+
+# The vendored jgenesis crates declare `version = { workspace = true }`.
+[workspace.package]
+version = "0.13.1"
+
+[workspace.dependencies]
+# Third-party dependencies used by the vendored jgenesis crates (versions
+# mirror upstream jgenesis workspace; see vendor/UPSTREAM-COMMIT).
+base64 = "0.22"
+bincode = "2"
+bytemuck = { version = "1", features = ["derive"] }
+clap = { version = "4", features = ["derive"] }
+crc = "3"
+log = "0.4"
+num = "0.4"
+rand = "0.10"
+regex = "1"
+rustc-hash = "2"
+serde = { version = "1", features = ["derive"] }
+test-log = "0.2"
+thiserror = "2"
+time = "0.3"
+tinyvec = "1"
+toml = "1"
+
+# WASM-only (never built here, but must resolve)
+js-sys = "0.3"
+
+# Vendored jgenesis workspace crates
+arm7tdmi-emu = { path = "vendor/arm7tdmi-emu" }
+dsp = { path = "vendor/dsp" }
+gb-config = { path = "vendor/gb-config" }
+gb-core = { path = "vendor/gb-core" }
+gba-config = { path = "vendor/gba-config" }
+gba-core = { path = "vendor/gba-core" }
+genesis-config = { path = "vendor/genesis-config" }
+genesis-core = { path = "vendor/genesis-core" }
+jgenesis-common = { path = "vendor/jgenesis-common" }
+jgenesis-proc-macros = { path = "vendor/jgenesis-proc-macros" }
+m68000-emu = { path = "vendor/m68000-emu" }
+mos6502-emu = { path = "vendor/mos6502-emu" }
+nes-config = { path = "vendor/nes-config" }
+pce-config = { path = "vendor/pce-config" }
+pce-core = { path = "vendor/pce-core" }
+huc6280-emu = { path = "vendor/huc6280-emu" }
+nes-core = { path = "vendor/nes-core" }
+smsgg-config = { path = "vendor/smsgg-config" }
+smsgg-core = { path = "vendor/smsgg-core" }
+snes-config = { path = "vendor/snes-config" }
+snes-coprocessors = { path = "vendor/snes-coprocessors" }
+snes-core = { path = "vendor/snes-core" }
+spc700-emu = { path = "vendor/spc700-emu" }
+wdc65816-emu = { path = "vendor/wdc65816-emu" }
+ym-opll = { path = "vendor/ym-opll" }
+z80-emu = { path = "vendor/z80-emu" }
+
+[dependencies]
+crossterm = "0.27"
+# Local menu artwork only (box-art previews). Pure Rust; the door never
+# performs network I/O (tools/fetch_game_art.py populates art/).
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
+# ROM identity check for netplay sessions (contract: SHA-256 must match).
+sha2 = "0.10"
+smsgg-core = { workspace = true }
+smsgg-config = { workspace = true }
+genesis-core = { workspace = true }
+genesis-config = { workspace = true }
+nes-core = { workspace = true }
+nes-config = { workspace = true }
+pce-core = { workspace = true }
+pce-config = { workspace = true }
+snes-core = { workspace = true }
+snes-config = { workspace = true }
+gba-core = { workspace = true }
+gba-config = { workspace = true }
+jgenesis-common = { workspace = true }
+bincode = { workspace = true }
+log = { workspace = true }
+crc = { workspace = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.59", features = [
+    "Win32_Foundation",
+    "Win32_Networking_WinSock",
+    "Win32_Storage_FileSystem",
+] }
+
+# Upstream jgenesis warns broadly via clippy; keep the config so the vendored
+# crates' `[lints] workspace = true` resolves, but don't fail our build on it.
+[workspace.lints.rust]
+rust_2018_idioms = "warn"
+
+[workspace.lints.clippy]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[profile.dev]
+opt-level = 1

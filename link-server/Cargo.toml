@@ -1,0 +1,14 @@
+[package]
+name = "gg_link_server"
+version = "0.1.0"
+edition = "2021"
+description = "Presence + challenge + lockstep relay server for the LameGear+ Sega BBS door (same wire protocol as lameboy's link server)"
+license = "MIT"
+
+# Dependency-free (std only) so it cross-compiles and runs anywhere the door
+# does. Session frames are relayed verbatim, so this same binary serves both
+# lameboy (serial bridge) and lamegear (input-mirroring lockstep) doors.
+
+[[bin]]
+name = "gg-link-server"
+path = "src/main.rs"

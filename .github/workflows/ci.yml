@@ -1,0 +1,19 @@
+name: ci
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      # Pure-Rust, dependency-free workspace: the door binary AND the
+      # netplay relay (gg-link-server) build together.
+      - name: build
+        run: cargo build --release --locked
+      - name: test
+        run: cargo test --release --locked

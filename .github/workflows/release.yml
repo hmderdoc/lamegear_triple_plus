@@ -1,0 +1,89 @@
+name: release
+
+# Tag a release to build it:  git tag v0.2.0 && git push origin v0.2.0
+# The tag must match Cargo.toml's version (package.sh enforces it).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  # Linux (static musl — no libc dependency), Windows (mingw), and FreeBSD
+  # are all pure-Rust cross-compiles from one Ubuntu runner via `cross`.
+  # Each archive carries BOTH binaries: the door (lamegear) and the netplay
+  # relay (gg-link-server).
+  cross:
+    name: ${{ matrix.label }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: linux-x86_64,   target: x86_64-unknown-linux-musl }
+          - { label: linux-arm64,    target: aarch64-unknown-linux-musl }  # Raspberry Pi 64-bit, ARM servers
+          - { label: windows-x86_64, target: x86_64-pc-windows-gnu }
+          - { label: freebsd-x86_64, target: x86_64-unknown-freebsd }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+      - name: build
+        run: cross build --release --locked --target ${{ matrix.target }}
+      - name: package
+        run: ./.github/package.sh "${{ matrix.label }}" "${{ matrix.target }}" "${GITHUB_REF_NAME}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lamegear-${{ matrix.label }}
+          path: dist/*
+          if-no-files-found: error
+
+  # macOS needs the Apple SDK, so it can't be cross-built on Linux — build
+  # natively. The macos-14 runner is Apple Silicon and cross-builds x86_64.
+  macos:
+    name: ${{ matrix.label }}
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { label: macos-arm64,  target: aarch64-apple-darwin }
+          - { label: macos-x86_64, target: x86_64-apple-darwin }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+      - name: build
+        run: cargo build --release --locked --target ${{ matrix.target }}
+      - name: package
+        run: ./.github/package.sh "${{ matrix.label }}" "${{ matrix.target }}" "${GITHUB_REF_NAME}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lamegear-${{ matrix.label }}
+          path: dist/*
+          if-no-files-found: error
+
+  release:
+    name: publish release
+    needs: [cross, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: checksums
+        run: |
+          cd dist
+          sha256sum *.tar.gz *.zip > SHA256SUMS.txt
+      - uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/SHA256SUMS.txt

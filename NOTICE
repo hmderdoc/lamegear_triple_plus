@@ -1,0 +1,19 @@
+LameGear+ — an 8-system retro console BBS door
+Copyright (C) 2026 hmderdoc
+
+This program is free software distributed under the GNU General Public
+License version 3 (see LICENSE).
+
+Emulation backends: vendored crates from the jgenesis project
+(https://github.com/jsgroth/jgenesis), Copyright (C) James Groth,
+licensed GPL-3.0. Local modifications are documented in
+vendor/PATCH-NOTES.md; the vendored upstream commit is recorded in
+vendor/UPSTREAM-COMMIT. The complete corresponding source for every
+release binary is this repository at the release tag.
+
+Door architecture adapted from lameboy (https://github.com/hmderdoc/lameboy)
+by the same author.
+
+The Game Boy Advance BIOS is copyrighted by Nintendo and is NOT included
+in this repository or in release archives. Sysops enabling the GBA system
+must dump `gba_bios.bin` from their own console.

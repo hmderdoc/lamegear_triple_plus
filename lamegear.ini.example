@@ -1,0 +1,54 @@
+# LameGear+ sysop configuration. Copy to lamegear.ini beside the binary.
+# Every key is optional; CLI flags override these.
+
+# ROM directory (default: roms/ beside the binary).
+# roms = /sbbs/xtrn/lamegear_plus/roms
+
+# Transmit frame-rate cap, 5-60. Emulation always runs full speed; this only
+# limits how often frames are sent to the caller. 20 is a good default.
+# fps = 20
+
+# Output color depth: auto | truecolor | 256 | 16
+# color = auto
+
+# Default render mode: block | ascii. (Sixel is deliberately NOT a sysop
+# default: callers opt in themselves on the settings page, and only when
+# their terminal advertises sixel support.)
+# render = block
+
+# Lobby / netplay relay server (host:port). Run link-server/gg-link-server
+# (systemd unit included) and point every participating BBS at it. Without
+# this the door is single-player and the LINK LOBBY page is hidden.
+# link_server = 127.0.0.1:9998
+
+# Attract mode: after attract_idle_secs of menu idle, run an unattended game
+# demo for attract_game_secs, then return to the menu. Any key hands control
+# back to the caller. Demos never touch saves.
+# attract = 1
+# attract_idle_secs = 30
+# attract_game_secs = 90
+
+# Genesis / Mega Drive page. OFF by default: one Genesis caller costs about
+# an order of magnitude more CPU than an SMS caller (68000 + Z80 + VDP +
+# YM2612). Enable after budgeting concurrent callers for your hardware.
+# genesis = 1
+
+# SNES page. Comparable per-caller CPU cost to Genesis.
+# snes = 1
+
+# GBA page. Commercial games additionally require the real 16KB GBA BIOS:
+# drop it next to the binary as gba_bios.bin (or set gba_bios = /path).
+# Homebrew that avoids BIOS calls runs without it.
+# gba = 1
+# gba_bios = gba_bios.bin
+
+# PC Engine / TurboGrafx-16 page (single-player; HuCard .pce ROMs only, no CD).
+# pce = 1
+
+# Game-room console caps: how many machines of each system the "club" owns,
+# by system slug (gg, sms, sg, md, nes, sfc, gba, pce). A console is one
+# session, solo or two-player; note each PLAYER in a linked session runs a
+# full emulator in their own door process, so md:1 can still cost 2x Genesis
+# CPU. Unlisted systems default to 1 (md/sfc/gba), 2 (pce), 3 (the 8-bits).
+# Only enforced while the link server is reachable.
+# consoles = md:1, sfc:1, gg:4, sms:3, sg:4, nes:3

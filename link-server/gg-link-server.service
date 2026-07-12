@@ -1,0 +1,11 @@
+[Unit]
+Description=LameGear+ link server (lobby + lockstep relay)
+After=network.target
+
+[Service]
+ExecStart=/sbbs/xtrn/lamegear_plus/link-server/target/release/gg-link-server 9998
+Restart=on-failure
+User=sbbs
+
+[Install]
+WantedBy=multi-user.target
