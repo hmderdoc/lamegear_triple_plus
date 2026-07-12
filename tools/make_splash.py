@@ -91,11 +91,13 @@ FONT = {
           "######.",
           "##.##..",
           "##..##."],
-    '+': ["......",
-          "..##..",
-          "######",
-          "..##..",
-          "......"],
+    # 4 wide, not 6: the triple-plus wordmark (LAMEGEAR+++) must fit 80
+    # columns — three 6-wide pluses overflow to 84, three 4-wide land at 78.
+    '+': ["....",
+          ".##.",
+          "####",
+          ".##.",
+          "...."],
 }
 
 FULL, UP, DOWN = '█', '▀', '▄'   # 0xDB, 0xDF, 0xDC
@@ -179,13 +181,13 @@ for _ in range(60):
 
 ctext(6, "H M D E R D O K   P R E S E N T S", BCYAN)
 
-# Rows 8-12: the wordmark. LAME white, GEAR bright blue, + bright red.
+# Rows 8-12: the wordmark. LAME white, GEAR bright blue, +++ bright red.
 def word_color(i, ch):
     if ch == '+':
         return BRED
     return WHITE if i < 4 else BBLUE
 
-draw_word(8, "LAMEGEAR+", word_color)
+draw_word(8, "LAMEGEAR+++", word_color)
 
 # Row 14: tagline, flanked by rule lines out to the edges.
 TAG = "◄ SEGA ∙ NINTENDO ∙ NEC ∙ ONE BBS DOOR ►"
@@ -242,7 +244,7 @@ def encode():
 
 def sauce(body_len):
     rec = bytearray(b'\x1aSAUCE00')
-    rec += b'LameGear+ splash'.ljust(35)[:35]          # Title
+    rec += b'LameGear+++ splash'.ljust(35)[:35]        # Title
     rec += b'hmderdoc'.ljust(20)[:20]                  # Author
     rec += b''.ljust(20)[:20]                          # Group
     rec += b'20260709'                                 # Date

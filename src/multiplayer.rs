@@ -5,7 +5,7 @@
 //! Framing and the control plane (HELLO/roster/challenge/link lifecycle) are
 //! identical to lameboy's — the same link-server binary relays for both doors.
 //! What differs is the session payload: there is no Game Boy serial byte
-//! bridge and no host-rendered video stream. LameGear+ sessions are
+//! bridge and no host-rendered video stream. LameGear+++ sessions are
 //! input-mirroring lockstep (spec §4): each peer simulates the whole session
 //! and renders locally; only `{frame, slot, buttons}` messages plus periodic
 //! `{frame, crc32}` state checks cross the network.

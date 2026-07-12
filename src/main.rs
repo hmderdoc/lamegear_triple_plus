@@ -1,4 +1,4 @@
-//! LameGear+ — a multi-system Sega BBS door (Game Gear / Master System /
+//! LameGear+++ — a multi-system Sega BBS door (Game Gear / Master System /
 //! SG-1000), sibling to lameboy. Same door architecture: DOOR32.SYS inherited
 //! socket, CP437 half-block rendering, cursor-report resize probing, transmit
 //! fps cap with congestion skipping; different emulation backend (vendored
@@ -43,7 +43,7 @@ use term::Term;
 
 fn print_usage() {
     eprintln!(
-        "LameGear+ - 8-system retro console BBS door \
+        "LameGear+++ - 8-system retro console BBS door \
          (GG / SMS / SG-1000 / Genesis / NES / SNES / GBA / PCE)"
     );
     eprintln!();

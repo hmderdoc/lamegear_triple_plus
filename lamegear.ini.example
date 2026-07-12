@@ -1,4 +1,4 @@
-# LameGear+ sysop configuration. Copy to lamegear.ini beside the binary.
+# LameGear+++ sysop configuration. Copy to lamegear.ini beside the binary.
 # Every key is optional; CLI flags override these.
 
 # ROM directory (default: roms/ beside the binary).

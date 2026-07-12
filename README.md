@@ -1,4 +1,4 @@
-# LameGear+ — multi-system BBS door
+# LameGear+++ — multi-system BBS door
 
 A BBS door emulator for **Sega Game Gear**, **Master System**, **SG-1000**,
 **Genesis / Mega Drive**, **NES**, **Super NES**, **Game Boy Advance**, and
@@ -20,67 +20,133 @@ Gear-to-Gear serial cable).
 | GBA | `.gba` | 240×160 | **sysop-gated** (`gba = 1`); commercial games need `gba_bios.bin` (16KB) beside the binary — homebrew runs without. Single-player. |
 | PC Engine | `.pce` | 256×224 | **sysop-gated** (`pce = 1`); HuCards only (no CD), single-player; copier headers auto-stripped |
 
-## Sysop quick start
+## Install (sysops)
 
-1. **Install**: grab the release archive for your platform and unpack it
-   into your externals directory (e.g. `/sbbs/xtrn/lamegear_plus`), or build
-   from source (see Build below). The archive contains the door
-   (`lamegear`), the netplay relay (`gg-link-server`), the splash screen,
-   a sample config, and the sysop tools.
-2. **ROMs**: drop them in `roms/` next to the binary. Extensions select the
-   system (see the table). Homebrew credits for anything you bundle belong
-   in `roms/CREDITS.txt`; good sources: <https://www.smspower.org/Homebrew/>,
-   <https://pdroms.de/>.
-3. **Config**: `cp lamegear.ini.example lamegear.ini` and edit. Every key is
-   documented in the example file. The heavy systems (Genesis / SNES / GBA /
-   PCE) are **off by default** — enable them after budgeting CPU (one
-   Genesis caller costs ~10x an SMS caller).
-4. **Synchronet**: register in `ctrl/xtrn.ini` (or via SCFG → External
-   Programs):
+Prebuilt, dependency-free binaries are attached to each
+[release](../../releases) — Linux (x86_64 / arm64, static musl), Windows
+(x86_64), macOS (arm64 / x86_64), and FreeBSD (x86_64). No runtime libs
+required. Each archive contains the door (`lamegear`), the netplay relay
+(`gg-link-server`), the splash screen, a sample config, and the sysop tools.
 
-   ```ini
-   [prog:GAMES:LAMEGEAR]
-   name = LameGear+
-   type = 12                          ; DOOR32.SYS
-   settings = 0x1004005
-   cmd = ./lamegear --user %4 --dropfile %f
-   startup_dir = ../xtrn/lamegear_plus
-   ```
-
-   Other BBS packages: anything that writes a DOOR32.SYS dropfile and hands
-   the door the socket works; without a dropfile the door falls back to
-   stdio.
-5. **Netplay**: the sample ini ships pointed at the public Futureland relay
-   (`link_server = futureland.today:9998`), so the GAME ROOM (multiplayer
-   lobby + chat) works out of the box and **boards on the same relay share
-   one interBBS game room** (verified over WAN-latency simulation; lockstep
-   auto-adapts its input delay to the measured RTT). Prefer your own relay?
-
-   ```sh
-   ./gg-link-server 9998 &          # or install link-server/gg-link-server.service
-   # lamegear.ini:  link_server = 127.0.0.1:9998
-   ```
-
-   The relay speaks plaintext with no auth: firewall a private one to the
-   boards you trust, like an FTN hub. Players must own byte-identical ROM
-   files (SHA-256 checked per session) and boards should run the same door
-   version. Comment `link_server` out for a single-player door.
-6. **GBA BIOS (optional)**: commercial GBA games need the real 16KB BIOS as
+1. Unpack the archive for your platform into a directory under your BBS's
+   external programs (e.g. `xtrn/lamegear/`), so you have
+   `…/lamegear/lamegear`.
+2. Drop your own legally-obtained ROMs into the `roms/` folder beside the
+   binary — the extension selects the system (see the table above). Credits
+   for bundled homebrew belong in `roms/CREDITS.txt`; good sources:
+   <https://www.smspower.org/Homebrew/>, <https://pdroms.de/>.
+3. Copy `lamegear.ini.example` to `lamegear.ini` and edit. The heavy systems
+   (Genesis / SNES / GBA / PCE) are **off by default** — enable them after
+   budgeting CPU (one Genesis caller costs ~10x an SMS caller).
+4. Optional: populate local menu artwork:
+   `python3 tools/fetch_game_art.py --roms roms --output art`. Existing
+   images are skipped; artwork is neither included in nor required by the
+   distribution.
+5. Optional (GBA): commercial GBA games need the real 16KB BIOS as
    `gba_bios.bin` beside the binary. It is Nintendo's copyrighted code —
    dump it from your own console; it is never bundled.
-7. **Box art (optional)**: `python3 tools/fetch_game_art.py --roms roms
-   --output art` populates the menu's box-art previews from the Libretro
-   thumbnail repos.
+6. Add the door in your BBS's door/external-program config (SCFG on
+   Synchronet, the door manager on EleBBS / Mystic / …) with the matching
+   command line below, then recycle/restart the BBS.
 
-**Per-user data** lives under `roms/.saves/<user>/` (cartridge SRAM + one
-save-state slot per game) and `~/.config/lamegear/config-<user>` (render /
-color / sound / aspect / 2P-port preferences, last game). Cheat codes are
-per-user sidecars next to the saves.
+Verify a download against `SHA256SUMS.txt` from the release.
 
-**Troubleshooting**: sixel geometry decisions are logged to
-`sixel-debug.log` beside the binary (terminal size, every pixel-geometry
-report the caller's terminal gave, and the chosen fit) — read it when a
-caller reports a wrong-looking picture.
+## Running as a door
+
+The only argument that matters is how the caller is connected; everything
+else has sane defaults (and a `lamegear.ini`, below). The two setups below
+cover most BBSes — the flag reference is further down.
+
+### Synchronet
+
+Add it in SCFG → *External Programs* → *Online Programs*. The simplest
+setup uses the **Standard** I/O method (stdio) and `--user %4` — no drop
+file:
+
+```
+[lamegear]
+ 1: Name ........................ LameGear+++
+ 2: Internal Code ............... LAMEGEAR
+ 3: Start-up Directory .......... ../xtrn/lamegear
+ 4: Command Line ................ lamegear --user %4
+10: Native Executable ........... Yes
+11: I/O Method .................. Standard
+17: BBS Drop File Type .......... DOOR32.SYS
+18: Place Drop File In .......... Node Directory
+```
+
+`%4` is the zero-padded user number; it keys per-user saves and preferences.
+
+**Prefer a socket?** Set `I/O Method` to **Socket** and the command line to
+`lamegear --user %4 --dropfile %f`. Leave the drop file in the **Node
+Directory**; Synchronet expands `%f` to its full path, so the door finds it
+regardless of the working directory.
+
+### EleBBS / Mystic / other DOOR32.SYS BBSes
+
+Configure a **native** door using the **socket** I/O method and a
+**DOOR32.SYS** drop file, then point `--dropfile` at it:
+
+```
+  Door type / executable ..... Native
+  I/O method ................. Socket
+  Drop file .................. DOOR32.SYS
+  Command line ............... lamegear --dropfile DOOR32.SYS
+                              (or the full path to the node's DOOR32.SYS)
+```
+
+`--dropfile` must resolve to the **DOOR32.SYS file** — the door reads the
+inherited socket handle from it. If the drop file can't be read, the door
+falls back to stdio — which a socket-mode door isn't connected to, so its
+output never reaches the caller (the tell-tale symptom: raw escape codes on
+the server console while the user sees nothing).
+
+### lamegear.ini (sysop defaults)
+
+Optional file beside the binary, so you don't repeat settings on the command
+line. Copy [`lamegear.ini.example`](lamegear.ini.example) to `lamegear.ini`
+and edit — every key is documented there. Command-line flags override it:
+
+```ini
+roms = roms          ; ROM directory (default: roms/ beside the binary)
+fps  = 20            ; transmit frame-rate cap, 5-60
+genesis = 1          ; enable the heavy systems only after budgeting CPU
+link_server = futureland.today:9998  ; public game-room relay (see Netplay)
+```
+
+The sample ini ships pointed at the public Futureland relay so the GAME ROOM
+(multiplayer + chat) works out of the box — and **boards on the same relay
+share one interBBS game room**. Run a private relay instead with the bundled
+`gg-link-server <port>` (systemd unit included) and point `link_server` at
+it; comment the key out for a single-player door. The relay speaks plaintext
+with no auth: firewall a private one to the boards you trust, like an FTN
+hub.
+
+### Command-line flags
+
+All optional; each overrides `lamegear.ini`. Only `--dropfile` / `--user`
+(the per-call connection) are normally passed by the BBS.
+
+| Flag | Description |
+| --- | --- |
+| `--dropfile <path>` | DOOR32.SYS dropfile: use its inherited socket + user identity |
+| `--user <id>` | Per-user key for saves + preferences (e.g. Synchronet `%4`) |
+| `--handle <name>` | Display name in the game room / chat (defaults from the dropfile) |
+| `--roms <path>` | ROM directory (default: `roms/` beside the binary) |
+| `--fps <n>` | Transmit frame-rate cap, 5–60 (default 20) |
+| `--color <mode>` | Force color depth: `truecolor` / `256` / `16` (default: auto-probe) |
+| `--block` / `--ascii` / `--sixel` | Force a render mode (otherwise the caller's saved choice) |
+| `--link <host:port>` | Game-room relay for network multiplayer |
+| `--mute` | Kill APC streamed audio globally |
+
+### Per-user data & troubleshooting
+
+Saves live under `roms/.saves/<user>/` (cartridge SRAM + one save-state slot
+per game); preferences (render / color / sound / aspect / 2P port, last
+game) under `~/.config/lamegear/config-<user>`; cheat codes are per-user
+sidecars next to the saves. Sixel geometry decisions are logged to
+`sixel-debug.log` beside the binary — read it when a caller reports a
+wrong-looking picture.
 
 ## Features
 
@@ -171,8 +237,9 @@ bridge. Both peers boot the same ROM fresh and simulate every frame; only
   in-process cable — a vendored-core UART patch implements the real serial
   hardware, verified against the official Sega hardware manual; see
   `vendor/PATCH-NOTES.md`). The shape comes from the sysop's port-trace
-  cache (`roms/.link-shapes`, lines of `file<TAB>shape`); without a cache
-  entry, `.gg` ROMs default to Gear-to-Gear and the rest to shared console.
+  cache (`roms/.link-shapes`, built by `tools/port_trace_sweep.py`); without
+  a cache entry, `.gg` ROMs default to Gear-to-Gear and the rest to shared
+  console.
 - Console-centric lobby: open ports JOIN instantly, closed ports knock
   (challenge/accept underneath); games name themselves by friendly title and
   both sides must own the same ROM byte-for-byte (**SHA-256 checked in the
@@ -228,6 +295,12 @@ on Linux.
 ## Validation harness
 
 ```sh
+python3 tools/make_test_rom.py roms      # SMS + GG test carts (Z80)
+python3 tools/make_test_rom_md.py roms   # Genesis test cart (hand-assembled 68000)
+python3 tools/make_test_rom_nes.py roms  # NES test cart (hand-assembled 6502)
+python3 tools/make_test_rom_sfc.py roms  # SNES test cart (hand-assembled 65816)
+python3 tools/make_test_rom_gba.py roms  # GBA test cart (hand-assembled ARM7)
+python3 tools/make_test_rom_pce.py roms  # PCE test cart (hand-assembled HuC6280)
 ./lamegear --selftest "roms/Test Cart.md" 3600    # determinism gate, per system
 ./lamegear --golden "roms/Test Cart.gg" 300       # framebuffer CRC at frame N
 tools/golden_check.sh                    # all test carts vs tools/golden.manifest
@@ -254,10 +327,13 @@ asserts zero desync per cell.
 - `tools/fetch_game_art.py --roms roms --output art` — populate the box-art
   cache from the Libretro thumbnail repos (all eight systems)
 - `tools/make_splash.py` — regenerate `lamegear_splash.bin`
-- `tools/make_test_rom_md.py` / `_gba.py` / `_gglink.py` — regenerate test
-  cartridges (hand-assembled 68000 / ARM7 / Z80 link-cable)
+- `tools/make_test_rom*.py` — regenerate the hand-assembled test cartridges
 - `tools/golden_check.sh` — rendering regression gate
 - `tools/latency_matrix.py` — netplay latency/jitter sweep
+- `python3 tools/port_trace_sweep.py` — classify the ROM library's
+  multiplayer shapes, writing `roms/.link-shapes`
+- `./lamegear --selftest-link "roms/Test Link.gg" 1800` — gear-to-gear
+  determinism gate
 
 ## Not implemented (by design or deferred)
 

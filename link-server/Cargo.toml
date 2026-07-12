@@ -2,7 +2,7 @@
 name = "gg_link_server"
 version = "0.1.0"
 edition = "2021"
-description = "Presence + challenge + lockstep relay server for the LameGear+ Sega BBS door (same wire protocol as lameboy's link server)"
+description = "Presence + challenge + lockstep relay server for the LameGear+++ Sega BBS door (same wire protocol as lameboy's link server)"
 license = "MIT"
 
 # Dependency-free (std only) so it cross-compiles and runs anywhere the door
