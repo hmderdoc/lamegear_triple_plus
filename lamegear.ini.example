@@ -16,10 +16,12 @@
 # their terminal advertises sixel support.)
 # render = block
 
-# Lobby / netplay relay server (host:port). Run link-server/gg-link-server
-# (systemd unit included) and point every participating BBS at it. Without
-# this the door is single-player and the LINK LOBBY page is hidden.
-# link_server = 127.0.0.1:9998
+# Lobby / netplay relay server (host:port). The public Futureland relay is
+# the out-of-the-box default so callers get the shared GAME ROOM (netplay +
+# chat, interBBS) immediately — boards on the same relay share one room.
+# Run your own instead (link-server/gg-link-server, systemd unit included)
+# by pointing this at it; comment it out for a single-player door.
+link_server = futureland.today:9998
 
 # Attract mode: after attract_idle_secs of menu idle, run an unattended game
 # demo for attract_game_secs, then return to the menu. Any key hands control

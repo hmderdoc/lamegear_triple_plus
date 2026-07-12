@@ -50,22 +50,21 @@ Gear-to-Gear serial cable).
    Other BBS packages: anything that writes a DOOR32.SYS dropfile and hands
    the door the socket works; without a dropfile the door falls back to
    stdio.
-5. **Netplay (optional)**: run the relay and point the ini at it:
+5. **Netplay**: the sample ini ships pointed at the public Futureland relay
+   (`link_server = futureland.today:9998`), so the GAME ROOM (multiplayer
+   lobby + chat) works out of the box and **boards on the same relay share
+   one interBBS game room** (verified over WAN-latency simulation; lockstep
+   auto-adapts its input delay to the measured RTT). Prefer your own relay?
 
    ```sh
    ./gg-link-server 9998 &          # or install link-server/gg-link-server.service
    # lamegear.ini:  link_server = 127.0.0.1:9998
    ```
 
-   The GAME ROOM (multiplayer lobby, chat) appears whenever the relay is
-   reachable. **InterBBS**: host the relay on a port other BBSes can reach
-   and have each sysop set the same `link_server =` — callers from every
-   connected board share one game room (verified over WAN-latency
-   simulation; lockstep auto-adapts its input delay to the measured RTT).
-   The relay speaks plaintext with no auth: firewall it to the boards you
-   trust, like an FTN hub. Players must own byte-identical ROM files
-   (SHA-256 checked per session) and boards should run the same door
-   version.
+   The relay speaks plaintext with no auth: firewall a private one to the
+   boards you trust, like an FTN hub. Players must own byte-identical ROM
+   files (SHA-256 checked per session) and boards should run the same door
+   version. Comment `link_server` out for a single-player door.
 6. **GBA BIOS (optional)**: commercial GBA games need the real 16KB BIOS as
    `gba_bios.bin` beside the binary. It is Nintendo's copyrighted code —
    dump it from your own console; it is never bundled.
