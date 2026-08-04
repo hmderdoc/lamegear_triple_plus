@@ -107,14 +107,39 @@ pub(crate) fn find_rom_in_dir(roms_dir: &std::path::Path, name: &str) -> Option<
     None
 }
 
-/// Scan `dir` (plus `dir/roms`, `dir/games`) for one system's extensions.
+/// Scan `dir` recursively for one system's extensions, so sysops can sort
+/// ROMs into subfolders (per system, alphabetical, whatever). Dot-entries
+/// (`.saves`, `.replays`, ...) are skipped; directories are deduped by
+/// canonical path so symlink cycles can't loop the walk.
 fn scan_roms(dir: &std::path::Path, system: &SystemDef) -> Vec<RomEntry> {
+    /// Deep enough for any sane library layout, shallow enough to bound
+    /// runaway nesting.
+    const MAX_DEPTH: usize = 8;
     let mut found: Vec<RomEntry> = Vec::new();
     let mut seen = std::collections::HashSet::new();
-    for d in [dir.to_path_buf(), dir.join("roms"), dir.join("games")] {
+    let mut seen_dirs = std::collections::HashSet::new();
+    let mut stack: Vec<(PathBuf, usize)> = vec![(dir.to_path_buf(), 0)];
+    while let Some((d, depth)) = stack.pop() {
+        let dcanon = d.canonicalize().unwrap_or_else(|_| d.clone());
+        if !seen_dirs.insert(dcanon) {
+            continue;
+        }
         let Ok(entries) = std::fs::read_dir(&d) else { continue };
         for entry in entries.flatten() {
             let path = entry.path();
+            let hidden = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .is_some_and(|n| n.starts_with('.'));
+            if hidden {
+                continue;
+            }
+            if path.is_dir() {
+                if depth < MAX_DEPTH {
+                    stack.push((path, depth + 1));
+                }
+                continue;
+            }
             let Some(ext) = path.extension().and_then(|e| e.to_str()) else { continue };
             if !system.extensions.contains(&ext.to_ascii_lowercase().as_str()) {
                 continue;
@@ -2596,4 +2621,50 @@ fn show_game_genie_page(
         slots.into_iter().filter(|s| !s.code.is_empty()).collect();
     gamegenie::save_codes(&user, rom_file, &keep);
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sys(ext: &str) -> &'static SystemDef {
+        SYSTEMS.iter().find(|s| s.extensions.contains(&ext)).unwrap()
+    }
+
+    #[test]
+    fn scan_finds_roms_in_subdirectories() {
+        let root = std::env::temp_dir().join(format!("lamegear-scan-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("nes/platformers")).unwrap();
+        std::fs::create_dir_all(root.join(".saves/alice")).unwrap();
+        std::fs::write(root.join("Alpha (U).nes"), b"x").unwrap();
+        std::fs::write(root.join("nes/Bravo (U).nes"), b"x").unwrap();
+        std::fs::write(root.join("nes/platformers/Charlie (U).nes"), b"x").unwrap();
+        std::fs::write(root.join("nes/Delta (U).gg"), b"x").unwrap();
+        std::fs::write(root.join(".saves/alice/Echo (U).nes"), b"x").unwrap();
+
+        let names: Vec<String> =
+            scan_roms(&root, sys("nes")).into_iter().map(|r| r.display).collect();
+        assert_eq!(names, ["Alpha", "Bravo", "Charlie"]);
+
+        let gg: Vec<String> =
+            scan_roms(&root, sys("gg")).into_iter().map(|r| r.display).collect();
+        assert_eq!(gg, ["Delta"]);
+        std::fs::remove_dir_all(&root).unwrap();
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn scan_survives_symlink_cycles() {
+        let root = std::env::temp_dir().join(format!("lamegear-cycle-test-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(root.join("deep")).unwrap();
+        std::fs::write(root.join("deep/Foxtrot (U).nes"), b"x").unwrap();
+        std::os::unix::fs::symlink(&root, root.join("deep/loop")).unwrap();
+
+        let names: Vec<String> =
+            scan_roms(&root, sys("nes")).into_iter().map(|r| r.display).collect();
+        assert_eq!(names, ["Foxtrot"]);
+        std::fs::remove_dir_all(&root).unwrap();
+    }
 }

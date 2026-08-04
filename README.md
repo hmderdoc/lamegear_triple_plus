@@ -32,9 +32,11 @@ required. Each archive contains the door (`lamegear`), the netplay relay
    external programs (e.g. `xtrn/lamegear/`), so you have
    `…/lamegear/lamegear`.
 2. Drop your own legally-obtained ROMs into the `roms/` folder beside the
-   binary — the extension selects the system (see the table above). Credits
-   for bundled homebrew belong in `roms/CREDITS.txt`; good sources:
-   <https://www.smspower.org/Homebrew/>, <https://pdroms.de/>.
+   binary — the extension selects the system (see the table above).
+   Subfolders are fine: the scan is recursive, so you can sort a big
+   library into `roms/nes/`, `roms/snes/`, etc. (folders starting with `.`
+   are skipped). Credits for bundled homebrew belong in `roms/CREDITS.txt`;
+   good sources: <https://www.smspower.org/Homebrew/>, <https://pdroms.de/>.
 3. Copy `lamegear.ini.example` to `lamegear.ini` and edit. The heavy systems
    (Genesis / SNES / GBA / PCE) are **off by default** — enable them after
    budgeting CPU (one Genesis caller costs ~10x an SMS caller).
