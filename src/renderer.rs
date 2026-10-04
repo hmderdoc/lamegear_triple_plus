@@ -14,6 +14,7 @@
 
 use crate::color::{self, ColorDepth};
 use crate::framebuffer::FrameBuffer;
+use crate::shade16;
 use std::io::{self, Write};
 
 /// ASCII character palette (ordered by brightness, dark to light)
@@ -118,6 +119,12 @@ pub struct Renderer {
     // Nearest-neighbor lookup tables (identity + offset in native/clip fits).
     col_map: Vec<usize>,
     row_map: Vec<usize>,
+    // Source span [start, end) behind each output column / sub-row. One
+    // pixel wide except when downscaling, where the 16-color matcher
+    // averages the whole box instead of point-sampling it.
+    col_span: Vec<(usize, usize)>,
+    row_span: Vec<(usize, usize)>,
+    shade_cache: ShadeCache,
 
     prev_cells: Vec<Cell>,
     force_repaint: bool,
@@ -160,6 +167,9 @@ impl Renderer {
             fit: FitKind::Native,
             col_map: Vec::new(),
             row_map: Vec::new(),
+            col_span: Vec::new(),
+            row_span: Vec::new(),
+            shade_cache: ShadeCache::default(),
             prev_cells: Vec::new(),
             force_repaint: false,
             sixel_px: (0, 0),
@@ -296,6 +306,8 @@ impl Renderer {
             FitKind::Scaled => (0..vis_h).map(|s| s * src_h / vis_h).collect(),
             _ => (0..vis_h).map(|s| s + clip_y).collect(),
         };
+        self.col_span = spans(&self.col_map, src_w, fit);
+        self.row_span = spans(&self.row_map, src_h, fit);
         self.out_cols = out_cols;
         self.out_rows = out_rows;
     }
@@ -512,11 +524,20 @@ impl Renderer {
     #[inline]
     fn set_pair_16(&mut self, fg: u8, bg: u8) {
         if fg != self.last_fg || bg != self.last_bg {
-            self.output_buffer.push(b'\x1b');
-            self.output_buffer.push(b'[');
-            self.output_buffer
-                .extend_from_slice(color::sgr16(fg, bg).as_bytes());
-            self.output_buffer.push(b'm');
+            // Same bytes as color::sgr16, without a String per change.
+            let bold = if fg < 8 { b'0' } else { b'1' };
+            self.output_buffer.extend_from_slice(&[
+                0x1b,
+                b'[',
+                bold,
+                b';',
+                b'3',
+                b'0' + (fg & 7),
+                b';',
+                b'4',
+                b'0' + bg,
+                b'm',
+            ]);
             self.last_fg = fg;
             self.last_bg = bg;
         }
@@ -549,6 +570,7 @@ impl Renderer {
         let out_cols = self.out_cols as usize;
         let out_rows = self.out_rows as usize;
         let is16 = self.config.depth == ColorDepth::C16;
+        let shade = if is16 { Some(shade16::table()) } else { None };
         let last_sub = fb.height - 1;
 
         for i in 0..out_rows {
@@ -563,11 +585,33 @@ impl Renderer {
                 let top = fb.get_pixel(sx, sy_top);
                 let bottom = fb.get_pixel(sx, sy_bot);
 
-                let (ch, fg_color, bg_color) = if is16 {
-                    let t16 = color::nearest16(top.r, top.g, top.b, j, 2 * i);
-                    let b16 = color::nearest16(bottom.r, bottom.g, bottom.b, j, 2 * i + 1);
-                    let (fg, bg, glyph) = color::pack_cell16(t16, b16);
-                    (glyph, fg, bg)
+                let (ch, fg_color, bg_color) = if let Some(t) = shade {
+                    if self.fit != FitKind::Scaled {
+                        let key = (t.key(top.r, top.g, top.b), t.key(bottom.r, bottom.g, bottom.b));
+                        self.shade_cache.get(t, key)
+                    } else {
+                        let (xs, ys_top) = (self.col_span[j], self.row_span[(2 * i).min(last_sub)]);
+                        let ys_bot = self.row_span.get(2 * i + 1).copied().unwrap_or(ys_top);
+                        // Quadrants: left/right only when the cell spans
+                        // more than one source column.
+                        let xm = (xs.0 + xs.1) / 2;
+                        let split_x = xm > xs.0;
+                        let (l, r) = if split_x { ((xs.0, xm), (xm, xs.1)) } else { (xs, xs) };
+                        let q = |x, y| {
+                            let mut reg = shade16::Region::default();
+                            accumulate(t, fb, x, y, &mut reg);
+                            reg
+                        };
+                        let (tl, bl) = (q(l, ys_top), q(l, ys_bot));
+                        let (tr, br) =
+                            if split_x { (q(r, ys_top), q(r, ys_bot)) } else { (tl, bl) };
+                        let (top, bot) = (tl.merge(&tr), bl.merge(&br));
+                        match (top.flat_key(), bot.flat_key()) {
+                            // Flat halves match like single pixels: memoized.
+                            (Some(kt), Some(kb)) => self.shade_cache.get(t, (kt, kb)),
+                            _ => t.match_cell(&tl, &tr, &bl, &br, split_x),
+                        }
+                    }
                 } else {
                     (
                         HALF_BLOCK,
@@ -818,6 +862,63 @@ impl Renderer {
     }
 }
 
+/// Direct-mapped memo of the 16-color matcher's one-pixel-per-half answers.
+/// A console frame uses few distinct colors, so nearly every cell of a
+/// native-fit frame is a hit.
+struct ShadeCache {
+    slots: Vec<(u32, (u8, u8, u8))>,
+}
+
+impl Default for ShadeCache {
+    fn default() -> Self {
+        ShadeCache { slots: vec![(u32::MAX, (0, 0, 0)); 4096] }
+    }
+}
+
+impl ShadeCache {
+    #[inline]
+    fn get(&mut self, t: &shade16::Shade16, (top, bot): (u16, u16)) -> (u8, u8, u8) {
+        let key = (top as u32) << 16 | bot as u32;
+        let slot = &mut self.slots[(key.wrapping_mul(0x9E37_79B1) >> 20) as usize];
+        if slot.0 != key {
+            *slot = (key, t.match_pair(top, bot));
+        }
+        slot.1
+    }
+}
+
+/// Source span behind each output index of a nearest-neighbor map: the pixel
+/// itself, or (downscaling) everything up to the next sample.
+fn spans(map: &[usize], src: usize, fit: FitKind) -> Vec<(usize, usize)> {
+    (0..map.len())
+        .map(|k| {
+            let start = map[k];
+            let end = match fit {
+                FitKind::Scaled => map.get(k + 1).copied().unwrap_or(src).max(start + 1),
+                _ => start + 1,
+            };
+            (start, end.min(src).max(start + 1))
+        })
+        .collect()
+}
+
+/// Add every pixel of a source box to a half-cell's statistics.
+fn accumulate(
+    t: &shade16::Shade16,
+    fb: &FrameBuffer,
+    (x0, x1): (usize, usize),
+    (y0, y1): (usize, usize),
+    h: &mut shade16::Region,
+) {
+    let x1 = x1.min(fb.width);
+    for y in y0..y1.min(fb.height) {
+        let row = &fb.pixels[y * fb.width..(y + 1) * fb.width];
+        for p in &row[x0.min(x1)..x1] {
+            t.add(h, p.r, p.g, p.b);
+        }
+    }
+}
+
 /// Same 8x8x4 RGB bucketing as art.rs's box-art quantizer.
 #[inline]
 fn coarse_bucket(r: u8, g: u8, b: u8) -> usize {
@@ -927,6 +1028,28 @@ mod tests {
         r.render(&fb2, &mut b3).unwrap();
         assert!(!contains(&b3, b"\x1b[2J"));
         assert_eq!(count(&b3, HALF_BLOCK), 1);
+    }
+
+    #[test]
+    fn c16_shades_mid_tones_at_native_and_downscaled_fits() {
+        // Mid gray between palette steps: shades, not flat blocks, both 1:1
+        // and box-averaged; an unchanged frame still emits nothing.
+        let mut fb = FrameBuffer::new(64, 48);
+        fb.pixels.fill(Rgb { r: 128, g: 128, b: 128 });
+        for (cols, rows) in [(80u16, 30u16), (20, 8)] {
+            let mut r = Renderer::new(
+                RenderConfig { mode: RenderMode::Block, depth: ColorDepth::C16, cell_pixels: None },
+                64,
+                48,
+            );
+            r.update_dimensions(cols, rows);
+            let mut b1 = Vec::new();
+            r.render(&fb, &mut b1).unwrap();
+            assert!(b1.iter().any(|&c| (0xB0..=0xB2).contains(&c)), "{cols}x{rows}");
+            let mut b2 = Vec::new();
+            r.render(&fb, &mut b2).unwrap();
+            assert_eq!(b2, b"\x1b[0m");
+        }
     }
 
     fn sixel_renderer(cols: u16, rows: u16, src_w: usize, src_h: usize) -> Renderer {

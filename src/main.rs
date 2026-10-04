@@ -22,6 +22,7 @@ mod menu;
 mod multiplayer;
 mod renderer;
 mod selftest;
+mod shade16;
 mod splash;
 mod systems;
 mod term;

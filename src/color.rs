@@ -6,8 +6,9 @@
 //!   - **Truecolor**: 24-bit `38;2;r;g;b` — the menu's native output.
 //!   - **256**: the xterm 6x6x6 cube / gray ramp (`38;5;N`); half the bytes of
 //!     truecolor and the game's default tier.
-//!   - **16**: the classic ANSI palette (`3N`/`4N`) with ordered dithering, for
-//!     terminals with no extended color at all.
+//!   - **16**: the classic ANSI palette (`3N`/`4N`), for terminals with no
+//!     extended color at all. The game picture shades with CP437 `░▒▓` (see
+//!     `shade16`); other 16-color output uses `nearest16`'s ordered dither.
 //!
 //! The quantizers are ported from the spectre door's `color.go`. One divergence:
 //! spectre's palette table is in CGA/VGA-attribute order (blue=1, red=4) yet it
@@ -182,10 +183,10 @@ pub fn xterm256(r: u8, g: u8, b: u8) -> u8 {
 /// of banding. The bias depends only on screen position: a static scene still
 /// deltas to nothing frame-over-frame.
 pub fn nearest16(r: u8, g: u8, b: u8, x: usize, y: usize) -> u8 {
-    // Amplitude +/-30 (spectre uses +/-45). The Game Boy's four shades sit at
-    // 0/85/170/255 — exactly on ANSI black/dark-gray/light-gray/white, each 42.5
-    // from the boundary with its neighbor. Keeping the bias under 42.5 means those
-    // flats never speckle (clean B&W), while continuous GBC color still blends.
+    // Amplitude +/-30 (spectre uses +/-45). The palette grays sit at
+    // 0/85/170/255, each 42.5 from the boundary with its neighbor. Keeping the
+    // bias under 42.5 means exact grays never speckle, while in-between colors
+    // still blend.
     let d = (BAYER4[y & 3][x & 3] * 2 - 15) * 2;
     let rr = clamp_u8(r as i32 + d);
     let gg = clamp_u8(g as i32 + d);
@@ -202,52 +203,9 @@ pub fn nearest16(r: u8, g: u8, b: u8, x: usize, y: usize) -> u8 {
     best as u8
 }
 
-/// How much bright color `8+i` loses when snapped to its dark twin `i` (used when
-/// both halves of a cell want a bright background).
-#[inline]
-fn twin_penalty(i: u8) -> i32 {
-    let c = ANSI16[(8 + i) as usize];
-    cdist(c[0] as i32, c[1] as i32, c[2] as i32, ANSI16[i as usize])
-}
-
-/// CP437 half-block glyphs used by `pack_cell16`.
-pub const FULL_BLOCK: u8 = 0xDB; // █
-pub const UPPER_HALF: u8 = 0xDF; // ▀
-pub const LOWER_HALF: u8 = 0xDC; // ▄
-pub const SPACE: u8 = 0x20;
-
-/// Resolve a half-block cell (top/bottom palette indexes) into classic-ANSI
-/// fg/bg/glyph. Classic backgrounds only span the 8 dark colors (no iCE-color
-/// assumption), so a bright bottom half flips the glyph to the lower-half block —
-/// the bright color rides in the foreground; if both halves are bright, the one
-/// that loses least snaps to its dark twin.
-pub fn pack_cell16(mut t16: u8, mut b16: u8) -> (u8, u8, u8) {
-    if t16 == b16 {
-        if t16 < 8 {
-            return (7, t16, SPACE); // solid dark cell: a space on that background
-        }
-        return (t16, 0, FULL_BLOCK); // solid bright cell: full block
-    }
-    if t16 >= 8 && b16 >= 8 {
-        if twin_penalty(b16 - 8) <= twin_penalty(t16 - 8) {
-            b16 -= 8;
-        } else {
-            t16 -= 8;
-        }
-        if t16 == b16 {
-            // twins collided (e.g. yellow+white both near gray)
-            return (7, t16, SPACE);
-        }
-    }
-    if b16 >= 8 {
-        return (b16, t16, LOWER_HALF); // fg paints the bottom
-    }
-    (t16, b16, UPPER_HALF) // fg paints the top
-}
-
-/// Build the classic SGR params (no `ESC[` / `m`) for a `pack_cell16` result. bg
-/// is always one of the 8 dark colors there, so plain `4N` suffices; a bright fg
-/// uses the bold attribute.
+/// Build the classic SGR params (no `ESC[` / `m`) for a classic-ANSI cell. bg
+/// must be one of the 8 dark colors, so plain `4N` suffices; a bright fg uses
+/// the bold attribute.
 pub fn sgr16(fg: u8, bg: u8) -> String {
     if fg < 8 {
         format!("0;3{};4{}", fg, bg)
@@ -342,9 +300,9 @@ mod tests {
     }
 
     #[test]
-    fn dmg_grays_map_cleanly_without_dither_noise() {
-        // The four DMG shades must land on solid ANSI grays at EVERY screen
-        // position (no dither speckle), so B&W games look clean in 16-color.
+    fn palette_grays_map_cleanly_without_dither_noise() {
+        // The four palette grays must land on solid ANSI grays at EVERY screen
+        // position (no dither speckle).
         let grays = [
             ((0u8, 0u8, 0u8), 0u8),
             ((85, 85, 85), 8),
@@ -365,17 +323,6 @@ mod tests {
                 }
             }
         }
-    }
-
-    #[test]
-    fn pack_cell16_solid_and_split() {
-        // Solid dark: space on that bg. Solid bright: full block.
-        assert_eq!(pack_cell16(0, 0), (7, 0, SPACE));
-        assert_eq!(pack_cell16(15, 15), (15, 0, FULL_BLOCK));
-        // Dark top over dark bottom: upper-half, fg=top bg=bottom.
-        assert_eq!(pack_cell16(2, 4), (2, 4, UPPER_HALF));
-        // Bright bottom over dark top: lower-half, fg carries the bright bottom.
-        assert_eq!(pack_cell16(0, 10), (10, 0, LOWER_HALF));
     }
 
     #[test]

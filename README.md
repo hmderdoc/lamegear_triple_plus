@@ -155,6 +155,13 @@ wrong-looking picture.
 - **DOOR32.SYS** dropfile + inherited socket, with stdio fallback
 - **CP437 half-block rendering** (1 column/pixel, 1 row/2 pixels, `0xDF`),
   truecolor/256/16-color with auto-probing, ASCII mode fallback
+- **Shaded 16-color mode**: classic-ANSI callers get CP437 `░▒▓` shading
+  (the matcher from the [shadeans](https://github.com/hmderdoc/shadeans)
+  converter: blends judged in Oklab, half blocks kept for real edges, colors
+  restricted to ones the pixels actually have), so 16 colors reach a few
+  hundred tones. A downscaled picture is box-averaged rather than
+  point-sampled, with `▌▐` half blocks for detail narrower than a cell. The
+  per-mean answer is a lookup table built once per process (~70 ms)
 - **Sixel render mode** (default when detected): real pixel graphics as one DCS per
   frame with frame de-duplication (an unchanged picture transmits nothing),
   DEC 2026 synchronized updates, and display-aspect awareness — auto targets
