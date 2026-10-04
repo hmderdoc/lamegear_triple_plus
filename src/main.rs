@@ -512,7 +512,9 @@ fn run_session(
         let _ = splash::show_splash(term, input, setting);
     }
     let depth = setting.resolve(input.color_probe());
-    let mut mode = mode_override.unwrap_or(cfg.render.unwrap_or(RenderMode::Block));
+    // No saved preference: sixel when the terminal advertises it, else block.
+    let detected = if input.sixel_supported() { RenderMode::Sixel } else { RenderMode::Block };
+    let mut mode = mode_override.unwrap_or(cfg.render.unwrap_or(detected));
     // A saved sixel preference only holds on a terminal that (still)
     // advertises sixel; anywhere else this session runs block. The saved
     // preference is kept — it re-applies on the next sixel-capable call.

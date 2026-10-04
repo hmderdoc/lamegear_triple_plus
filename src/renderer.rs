@@ -28,9 +28,9 @@ const CLIP_MAX_Y: usize = 16;
 pub enum RenderMode {
     Ascii,
     Block,
-    /// True pixel graphics as sixel DCS streams. Strictly opt-in (settings
-    /// page, shown only to terminals that advertise sixel in DA) — the door's
-    /// native tongue stays CP437. Frames are de-duplicated: an unchanged
+    /// True pixel graphics as sixel DCS streams. Only offered to terminals
+    /// that advertise sixel in DA, where it is the default unless the caller
+    /// saved another choice. Frames are de-duplicated: an unchanged
     /// picture transmits nothing, same as the block renderer's empty delta.
     Sixel,
 }
