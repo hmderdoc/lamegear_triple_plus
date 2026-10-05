@@ -11,9 +11,9 @@
 # Output color depth: auto | truecolor | 256 | 16
 # color = auto
 
-# Default render mode: block | ascii. (Sixel is deliberately NOT a sysop
-# default: callers opt in themselves on the settings page, and only when
-# their terminal advertises sixel support.)
+# Force a render mode for every caller: block | ascii. Leave unset to let
+# callers choose: they default to sixel when their terminal advertises it,
+# else block, and can change it on the settings page.
 # render = block
 
 # Lobby / netplay relay server (host:port). The public Futureland relay is

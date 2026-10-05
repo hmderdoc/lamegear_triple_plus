@@ -137,7 +137,7 @@ All optional; each overrides `lamegear.ini`. Only `--dropfile` / `--user`
 | `--roms <path>` | ROM directory (default: `roms/` beside the binary) |
 | `--fps <n>` | Transmit frame-rate cap, 5–60 (default 20) |
 | `--color <mode>` | Force color depth: `truecolor` / `256` / `16` (default: auto-probe) |
-| `--block` / `--ascii` / `--sixel` | Force a render mode (otherwise the caller's saved choice) |
+| `--block` / `--ascii` / `--sixel` | Force a render mode (otherwise the caller's saved choice, else sixel if detected, else block) |
 | `--link <host:port>` | Game-room relay for network multiplayer |
 | `--mute` | Kill APC streamed audio globally |
 
@@ -155,14 +155,21 @@ wrong-looking picture.
 - **DOOR32.SYS** dropfile + inherited socket, with stdio fallback
 - **CP437 half-block rendering** (1 column/pixel, 1 row/2 pixels, `0xDF`),
   truecolor/256/16-color with auto-probing, ASCII mode fallback
-- **Sixel render mode** (strictly opt-in): real pixel graphics as one DCS per
+- **Shaded 16-color mode**: classic-ANSI callers get CP437 `░▒▓` shading
+  (the matcher from the [shadeans](https://github.com/hmderdoc/shadeans)
+  converter: blends judged in Oklab, half blocks kept for real edges, colors
+  restricted to ones the pixels actually have), so 16 colors reach a few
+  hundred tones. A downscaled picture is box-averaged rather than
+  point-sampled, with `▌▐` half blocks for detail narrower than a cell. The
+  per-mean answer is a lookup table built once per process (~70 ms)
+- **Sixel render mode** (default when detected): real pixel graphics as one DCS per
   frame with frame de-duplication (an unchanged picture transmits nothing),
   DEC 2026 synchronized updates, and display-aspect awareness — auto targets
   the **4:3 a real console TV showed** (3:2 native for GBA), pre-widened on
   CRT-aspect-corrected terminals (SyncTERM) so the on-screen shape is right;
   callers can override to square-pixel or fill in settings. Offered on the
-  settings page only when the terminal's DA reply advertises sixel; never
-  auto-selected — the door's native tongue stays CP437.
+  settings page only when the terminal's DA reply advertises sixel, and
+  selected by default there unless the caller saved another choice.
 - **Fit rules** (in order): native 1:1 → lossless edge clip (≤8 px columns,
   ≤16 px overscan rows) → aspect-preserving scale. Game Gear is pixel-perfect
   on a 162×74 terminal; SMS clips one column onto SyncTERM's 255-col cap.
